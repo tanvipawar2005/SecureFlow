@@ -109,4 +109,4 @@ From the repository root after installing dependencies:
 
 ## Author
 
-Tanvi Vijay Pawar — M.Sc. Data Analytics academic project, Network Security and Cryptography.
+Data Analytics academic project, Network Security and Cryptography.
