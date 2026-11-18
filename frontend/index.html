@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureFlow - Data Security Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-btn.active { background-color: #3b82f6; color: white; }
+        .warning { background-color: #fef3c7; border-left: 4px solid #f59e0b; }
+        .danger { background-color: #fee2e2; border-left: 4px solid #ef4444; }
+        .success { background-color: #d1fae5; border-left: 4px solid #10b981; }
+        .info { background-color: #dbeafe; border-left: 4px solid #3b82f6; }
+        .network-packet {
+            font-family: 'Courier New', monospace;
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">
+                <i class="fas fa-shield-alt text-blue-600"></i> SecureFlow
+            </h1>
+            <p class="text-gray-600 text-lg">
+                Demonstrating Data Security: Insecure Obfuscation vs Secure Encryption
+            </p>
+            <div class="mt-4 flex justify-center space-x-2">
+                <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">Client-Side Obfuscation</span>
+                <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">Fernet Encryption</span>
+                <span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">RSA Encryption</span>
+            </div>
+        </header>
+
+        <!-- Tabs Navigation -->
+        <div class="flex flex-wrap border-b mb-8">
+            <button class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-blue-600 active" data-tab="obfuscation">
+                <i class="fas fa-eye-slash mr-2"></i>Insecure Obfuscation
+            </button>
+            <button class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-blue-600" data-tab="aes">
+                <i class="fas fa-lock mr-2"></i>AES Encryption
+            </button>
+            <button class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-blue-600" data-tab="rsa">
+                <i class="fas fa-key mr-2"></i>RSA Encryption
+            </button>
+            <button class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-blue-600" data-tab="file">
+                <i class="fas fa-file mr-2"></i>File Encryption
+            </button>
+            <button class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-blue-600" data-tab="network">
+                <i class="fas fa-network-wired mr-2"></i>Network View
+            </button>
+            <button class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-blue-600" data-tab="comparison">
+                <i class="fas fa-balance-scale mr-2"></i>Comparison
+            </button>
+            <!-- In the tab navigation section (around line 70-80) -->
+            <button class="tab-btn px-6 py-3 font-medium text-gray-600 hover:text-blue-600" data-tab="image">
+                <i class="fas fa-image mr-2"></i>Image Encryption
+            </button>
+        </div>
+
+        <!-- Tab Contents -->
+        <div id="tab-contents">
+            
+            <!-- Tab 1: Insecure Obfuscation -->
+            <div id="obfuscation" class="tab-content active">
+                <div class="warning p-4 mb-6 rounded">
+                    <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                    <strong>WARNING:</strong> This method provides NO real security. It's easily reversible and only demonstrates why client-side obfuscation is insufficient.
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Left: Obfuscation Methods -->
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Obfuscation Methods</h3>
+                        
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Select Method:</label>
+                            <select id="obfuscation-method" class="w-full p-3 border rounded">
+                                <option value="caesar">Caesar Cipher (Shift)</option>
+                                <option value="reverse">Reverse String</option>
+                                <option value="base64">Base64 Encoding</option>
+                                <option value="xor">XOR "Encryption"</option>
+                                <option value="scramble">Character Scramble</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Enter Text to Obfuscate:</label>
+                            <textarea id="obfuscate-input" class="w-full p-3 border rounded h-32" placeholder="Enter your secret message here...">This is a secret message that should be secured!</textarea>
+                        </div>
+
+                        <div class="mb-4" id="caesar-shift-container">
+                            <label class="block text-gray-700 mb-2">Shift Amount (1-25):</label>
+                            <input type="range" id="caesar-shift" min="1" max="25" value="3" class="w-full">
+                            <div class="flex justify-between text-sm text-gray-500">
+                                <span>Shift: <span id="shift-value">3</span></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4" id="xor-key-container" style="display: none;">
+                            <label class="block text-gray-700 mb-2">XOR Key (single character):</label>
+                            <input type="text" id="xor-key" maxlength="1" value="K" class="w-full p-2 border rounded">
+                        </div>
+
+                        <button id="obfuscate-btn" class="w-full bg-yellow-500 text-white py-3 rounded font-bold hover:bg-yellow-600">
+                            <i class="fas fa-mask mr-2"></i>Obfuscate Text
+                        </button>
+                    </div>
+
+                    <!-- Right: Results & Explanation -->
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Results & Security Analysis</h3>
+                        
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Obfuscated Output:</label>
+                            <textarea id="obfuscate-output" class="w-full p-3 border rounded h-32 bg-gray-50" readonly></textarea>
+                            <button id="copy-obfuscated" class="mt-2 px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                                <i class="fas fa-copy mr-2"></i>Copy
+                            </button>
+                        </div>
+
+                        <div class="danger p-4 rounded mb-6">
+                            <h4 class="font-bold text-red-700 mb-2">Why This Is Insecure:</h4>
+                            <ul class="list-disc pl-5 text-red-600">
+                                <li>All processing happens in browser (visible in DevTools)</li>
+                                <li>No actual encryption - just transformation</li>
+                                <li>Easily reversible with same algorithm</li>
+                                <li>No protection against MITM attacks</li>
+                                <li>Keys/parameters are exposed to user</li>
+                            </ul>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Try to Reverse It:</label>
+                            <button id="reverse-obfuscation" class="w-full bg-red-500 text-white py-3 rounded font-bold hover:bg-red-600">
+                                <i class="fas fa-undo mr-2"></i>Reverse Obfuscation (See how easy it is!)
+                            </button>
+                        </div>
+
+                        <div class="info p-4 rounded">
+                            <h4 class="font-bold text-blue-700 mb-2">Learning Point:</h4>
+                            <p class="text-blue-600">Client-side "encryption" like this gives a false sense of security. Real encryption requires server-side processing with proper cryptographic algorithms.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: AES Encryption -->
+            <div id="aes" class="tab-content">
+                <div class="success p-4 mb-6 rounded">
+                    <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                    <strong>SECURE:</strong> This uses Fernet encryption with PBKDF2 key derivation - an industry standard for data security.
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Left: Encryption -->
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Fernet Text Encryption</h3>
+                        
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Enter Text to Encrypt:</label>
+                            <textarea id="aes-input" class="w-full p-3 border rounded h-32" placeholder="Enter sensitive data here...">This is highly confidential information that needs real protection.</textarea>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Encryption Password:</label>
+                            <input type="password" id="aes-password" class="w-full p-3 border rounded" placeholder="Enter strong password" value="SecurePass123!">
+                            <p class="text-sm text-gray-500 mt-1">This password derives the encryption key using PBKDF2</p>
+                        </div>
+
+                        <button id="encrypt-aes-btn" class="w-full bg-green-600 text-white py-3 rounded font-bold hover:bg-green-700 mb-4">
+                            <i class="fas fa-lock mr-2"></i>Encrypt with Fernet
+                        </button>
+
+                        <div id="aes-results" class="hidden">
+                            <div class="p-4 bg-gray-50 rounded">
+                                <h4 class="font-bold text-gray-700 mb-2">Encryption Results:</h4>
+                                <div class="mb-3">
+                                    <label class="block text-gray-600 text-sm">Encrypted Text (Base64):</label>
+                                    <textarea id="aes-encrypted-output" class="w-full p-2 border rounded text-xs h-20" readonly></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="block text-gray-600 text-sm">Salt (used in key derivation):</label>
+                                    <input type="text" id="aes-salt" class="w-full p-2 border rounded text-xs" readonly>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    <p><i class="fas fa-info-circle mr-1"></i> Algorithm: Fernet (AES-128-CBC + HMAC-SHA256) with PBKDF2-HMAC-SHA256</p>
+                                    <p><i class="fas fa-info-circle mr-1"></i> Key Size: 256 bits (32 bytes)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Decryption -->
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Fernet Decryption</h3>
+                        
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Encrypted Text:</label>
+                            <textarea id="aes-decrypt-input" class="w-full p-3 border rounded h-20" placeholder="Paste encrypted text here..."></textarea>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Salt (from encryption):</label>
+                            <input type="text" id="decrypt-salt" class="w-full p-3 border rounded" placeholder="Enter salt value">
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Password:</label>
+                            <input type="password" id="decrypt-password" class="w-full p-3 border rounded" placeholder="Enter the same password">
+                        </div>
+
+                        <button id="decrypt-aes-btn" class="w-full bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700 mb-4">
+                            <i class="fas fa-unlock mr-2"></i>Decrypt with Fernet
+                        </button>
+
+                        <div id="decryption-results" class="hidden">
+                            <div class="p-4 bg-green-50 rounded">
+                                <h4 class="font-bold text-green-700 mb-2">Decryption Successful!</h4>
+                                <div class="mb-3">
+                                    <label class="block text-gray-600 text-sm">Decrypted Text:</label>
+                                    <textarea id="aes-decrypted-output" class="w-full p-2 border rounded h-32" readonly></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info p-4 rounded mt-6">
+                            <h4 class="font-bold text-blue-700 mb-2">How Fernet Works:</h4>
+                            <ul class="list-disc pl-5 text-blue-600 text-sm">
+                                <li>Password converted to key using PBKDF2 (100,000 iterations)</li>
+                                <li>Unique salt ensures different keys from same password</li>
+                                <li>AES-128 uses 10 rounds; Fernet authenticates ciphertext with HMAC</li>
+                                <li>Military-grade encryption standard</li>
+                                <li>All processing happens on secure server</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: RSA Encryption -->
+            <div id="rsa" class="tab-content">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Left: Key Generation -->
+                    <div class="bg-white p-6 rounded-lg shadow lg:col-span-1">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">RSA Key Pair Generation</h3>
+                        <p class="text-gray-600 mb-6">RSA is used for secure key exchange. Generate a public/private key pair:</p>
+                        
+                        <button id="generate-rsa-keys" class="w-full bg-purple-600 text-white py-3 rounded font-bold hover:bg-purple-700 mb-6">
+                            <i class="fas fa-key mr-2"></i>Generate RSA Keys (2048-bit)
+                        </button>
+
+                        <div id="rsa-keys" class="hidden">
+                            <div class="mb-4">
+                                <label class="block text-gray-700 mb-2">Public Key (share this):</label>
+                                <textarea id="public-key" class="w-full p-3 border rounded text-xs h-32 font-mono" readonly></textarea>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 mb-2">Private Key (keep secret!):</label>
+                                <textarea id="private-key" class="w-full p-3 border rounded text-xs h-32 font-mono bg-red-50" readonly></textarea>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                <p><i class="fas fa-info-circle mr-1"></i> Key Size: 2048 bits</p>
+                                <p><i class="fas fa-info-circle mr-1"></i> Padding: OAEP with SHA-256</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Middle: Encryption with Public Key -->
+                    <div class="bg-white p-6 rounded-lg shadow lg:col-span-1">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Encrypt with Public Key</h3>
+                        
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Text to Encrypt:</label>
+                            <textarea id="rsa-encrypt-input" class="w-full p-3 border rounded h-24" placeholder="Enter message to encrypt...">Sensitive symmetric key or short message</textarea>
+                            <p class="text-sm text-gray-500 mt-1">RSA is best for encrypting small data like symmetric keys</p>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Recipient's Public Key:</label>
+                            <textarea id="rsa-public-key-input" class="w-full p-3 border rounded h-32 font-mono text-xs" placeholder="Paste public key here..."></textarea>
+                        </div>
+
+                        <button id="encrypt-rsa-btn" class="w-full bg-green-600 text-white py-3 rounded font-bold hover:bg-green-700 mb-4">
+                            <i class="fas fa-lock mr-2"></i>Encrypt with RSA
+                        </button>
+
+                        <div id="rsa-encryption-results" class="hidden">
+                            <div class="p-4 bg-gray-50 rounded">
+                                <h4 class="font-bold text-gray-700 mb-2">RSA Encrypted:</h4>
+                                <textarea id="rsa-encrypted-output" class="w-full p-2 border rounded text-xs h-24" readonly></textarea>
+                                <p class="text-xs text-gray-500 mt-2"><i class="fas fa-info-circle mr-1"></i> Only the matching private key can decrypt this</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Decryption with Private Key -->
+                    <div class="bg-white p-6 rounded-lg shadow lg:col-span-1">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Decrypt with Private Key</h3>
+                        
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Encrypted Text:</label>
+                            <textarea id="rsa-decrypt-input" class="w-full p-3 border rounded h-24" placeholder="Paste RSA encrypted text..."></textarea>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Your Private Key:</label>
+                            <textarea id="rsa-private-key-input" class="w-full p-3 border rounded h-32 font-mono text-xs bg-red-50" placeholder="Paste your private key here..."></textarea>
+                        </div>
+
+                        <button id="decrypt-rsa-btn" class="w-full bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700 mb-4">
+                            <i class="fas fa-unlock mr-2"></i>Decrypt with RSA
+                        </button>
+
+                        <div id="rsa-decryption-results" class="hidden">
+                            <div class="p-4 bg-green-50 rounded">
+                                <h4 class="font-bold text-green-700 mb-2">Decrypted Message:</h4>
+                                <textarea id="rsa-decrypted-output" class="w-full p-2 border rounded h-24" readonly></textarea>
+                            </div>
+                        </div>
+
+                        <div class="info p-4 rounded mt-6">
+                            <h4 class="font-bold text-blue-700 mb-2">RSA Use Case:</h4>
+                            <p class="text-blue-600 text-sm">Typically, RSA encrypts an AES key, then AES encrypts the actual data. This combines the benefits of both: RSA's secure key exchange and AES's speed for bulk data.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: File Encryption -->
+            <div id="file" class="tab-content">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Left: File Encryption -->
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">File Encryption (Fernet)</h3>
+                        
+                        <div class="mb-6 p-4 border-2 border-dashed border-gray-300 rounded text-center">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-gray-600 mb-4">Drag & drop or click to select file</p>
+                            <input type="file" id="file-to-encrypt" class="hidden">
+                            <button id="browse-file" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                <i class="fas fa-folder-open mr-2"></i>Browse Files
+                            </button>
+                            <div id="selected-file" class="mt-4 hidden">
+                                <p class="text-green-600"><i class="fas fa-check-circle mr-2"></i><span id="filename"></span></p>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Encryption Password:</label>
+                            <input type="password" id="file-password" class="w-full p-3 border rounded" placeholder="Enter strong password" value="FileSecure123!">
+                        </div>
+
+                        <button id="encrypt-file-btn" class="w-full bg-green-600 text-white py-3 rounded font-bold hover:bg-green-700 mb-6" disabled>
+                            <i class="fas fa-lock mr-2"></i>Encrypt File with Fernet
+                        </button>
+
+                        <div id="file-encryption-results" class="hidden">
+                            <div class="p-4 bg-gray-50 rounded">
+                                <h4 class="font-bold text-gray-700 mb-2">File Encrypted Successfully!</h4>
+                                <p class="text-gray-600 mb-3">File saved as: <span id="encrypted-filename" class="font-mono"></span></p>
+                                <div class="mb-3">
+                                    <label class="block text-gray-600 text-sm">Salt (needed for decryption):</label>
+                                    <input type="text" id="file-salt" class="w-full p-2 border rounded text-xs" readonly>
+                                </div>
+                                <button id="download-encrypted" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+                                    <i class="fas fa-download mr-2"></i>Download Encrypted File
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: File Decryption -->
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">File Decryption</h3>
+                        
+                        <div class="mb-6 p-4 border-2 border-dashed border-gray-300 rounded text-center">
+                            <i class="fas fa-file-alt text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-gray-600 mb-4">Select encrypted .enc file</p>
+                            <input type="file" id="file-to-decrypt" class="hidden" accept=".enc">
+                            <button id="browse-encrypted" class="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                                <i class="fas fa-folder-open mr-2"></i>Select .enc File
+                            </button>
+                            <div id="selected-encrypted" class="mt-4 hidden">
+                                <p class="text-green-600"><i class="fas fa-check-circle mr-2"></i><span id="encrypted-filename-display"></span></p>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Decryption Password:</label>
+                            <input type="password" id="decrypt-file-password" class="w-full p-3 border rounded" placeholder="Enter the same password">
+                        </div>
+
+                        <button id="decrypt-file-btn" class="w-full bg-blue-600 text-white py-3 rounded font-bold hover:bg-blue-700 mb-6" disabled>
+                            <i class="fas fa-unlock mr-2"></i>Decrypt File
+                        </button>
+
+                        <div id="file-decryption-results" class="hidden">
+                            <div class="p-4 bg-green-50 rounded">
+                                <h4 class="font-bold text-green-700 mb-2">File Decrypted Successfully!</h4>
+                                <p class="text-gray-600 mb-3">Original file restored: <span id="original-filename" class="font-mono"></span></p>
+                                <button id="download-decrypted" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">
+                                    <i class="fas fa-download mr-2"></i>Download Decrypted File
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="info p-4 rounded mt-6">
+                            <h4 class="font-bold text-blue-700 mb-2">File Encryption Process:</h4>
+                            <ol class="list-decimal pl-5 text-blue-600 text-sm">
+                                <li>File uploaded to secure server</li>
+                                <li>Random salt generated for key derivation</li>
+                                <li>Fernet key created from password + salt</li>
+                                <li>File encrypted using Fernet (AES in CBC mode)</li>
+                                <li>Salt prepended to encrypted file</li>
+                                <li>Downloadable as .enc file</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 5: Network View -->
+            <div id="network" class="tab-content">
+                <div class="bg-white p-6 rounded-lg shadow mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-6">Network Security Demonstration</h3>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Left: Insecure Transmission -->
+                        <div class="p-6 border-2 border-red-300 rounded">
+                            <h4 class="text-lg font-bold text-red-700 mb-4">
+                                <i class="fas fa-times-circle mr-2"></i>Insecure Transmission (Obfuscation)
+                            </h4>
+                            
+                            <div class="mb-6">
+                                <h5 class="font-bold text-gray-700 mb-2">What an attacker sees:</h5>
+                                <div class="network-packet">
+                                    <div class="text-yellow-300">POST /obfuscate HTTP/1.1</div>
+                                    <div class="text-green-300">Host: example.com</div>
+                                    <div class="text-blue-300">Content-Type: application/json</div>
+                                    <br>
+                                    <div class="text-white">{</div>
+                                    <div class="text-white">  "text": "<span id="attack-view-text">This is a secret message</span>",</div>
+                                    <div class="text-white">  "method": "caesar",</div>
+                                    <div class="text-white">  "shift": 3</div>
+                                    <div class="text-white">}</div>
+                                </div>
+                                <p class="text-red-600 text-sm mt-2"><i class="fas fa-exclamation-triangle mr-1"></i> Plaintext is fully visible to network attackers!</p>
+                            </div>
+
+                            <div class="danger p-4 rounded">
+                                <h5 class="font-bold text-red-700 mb-2">Man-in-the-Middle Attack Risk:</h5>
+                                <ul class="list-disc pl-5 text-red-600 text-sm">
+                                    <li>Attacker can read all data</li>
+                                    <li>Can modify data in transit</li>
+                                    <li>No authentication of sender</li>
+                                    <li>No protection against replay attacks</li>
+                                    <li>Easily intercepted on public WiFi</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Right: Secure Transmission -->
+                        <div class="p-6 border-2 border-green-300 rounded">
+                            <h4 class="text-lg font-bold text-green-700 mb-4">
+                                <i class="fas fa-check-circle mr-2"></i>Secure Transmission (AES Encryption)
+                            </h4>
+                            
+                            <div class="mb-6">
+                                <h5 class="font-bold text-gray-700 mb-2">What an attacker sees:</h5>
+                                <div class="network-packet">
+                                    <div class="text-yellow-300">POST /encrypt-text HTTP/1.1</div>
+                                    <div class="text-green-300">Host: secure-server.com</div>
+                                    <div class="text-blue-300">Content-Type: application/json</div>
+                                    <br>
+                                    <div class="text-white">{</div>
+                                    <div class="text-white">  "text": "<span id="secure-attack-view">gAAAAABmWf8Rq9pJ3V7K... (base64 encoded ciphertext)</span>",</div>
+                                    <div class="text-white">  "password": "•••••••••••"</div>
+                                    <div class="text-white">}</div>
+                                </div>
+                                <p class="text-green-600 text-sm mt-2"><i class="fas fa-shield-alt mr-1"></i> Without the encryption key, this is useless to attackers!</p>
+                            </div>
+
+                            <div class="success p-4 rounded">
+                                <h5 class="font-bold text-green-700 mb-2">Security Features:</h5>
+                                <ul class="list-disc pl-5 text-green-600 text-sm">
+                                    <li>Illustrative ciphertext only; actual API uses HTTP</li>
+                                    <li>Even if intercepted, cannot be read</li>
+                                    <li>Integrity protection (tampering detectable)</li>
+                                    <li>Unique encryption each time (IV/salt)</li>
+                                    <li>Secure key derivation (PBKDF2)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Demonstration Controls -->
+                    <div class="mt-8 p-6 bg-gray-50 rounded">
+                        <h4 class="font-bold text-gray-700 mb-4">Live Demonstration</h4>
+                        
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Enter message to see network difference:</label>
+                            <textarea id="network-demo-input" class="w-full p-3 border rounded h-24">Credit Card: 4111 1111 1111 1111, Exp: 12/25, CVV: 123</textarea>
+                        </div>
+
+                        <div class="flex space-x-4">
+                            <button id="show-insecure" class="flex-1 bg-red-500 text-white py-3 rounded font-bold hover:bg-red-600">
+                                <i class="fas fa-eye mr-2"></i>Show Insecure Transmission
+                            </button>
+                            <button id="show-secure" class="flex-1 bg-green-600 text-white py-3 rounded font-bold hover:bg-green-700">
+                                <i class="fas fa-shield-alt mr-2"></i>Show Secure Transmission
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 6: Comparison -->
+            <div id="comparison" class="tab-content">
+                <div class="bg-white p-8 rounded-lg shadow">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-8 text-center">Security Comparison Dashboard</h3>
+                    
+                    <!-- Comparison Table -->
+                    <div class="overflow-x-auto mb-12">
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="border p-4 text-left">Security Aspect</th>
+                                    <th class="border p-4 text-left text-red-600">Client Obfuscation</th>
+                                    <th class="border p-4 text-left text-green-600">Fernet Encryption</th>
+                                    <th class="border p-4 text-left text-purple-600">RSA Encryption</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="border p-4 font-medium">Encryption Strength</td>
+                                    <td class="border p-4 text-red-600"><i class="fas fa-times mr-2"></i>None (just encoding)</td>
+                                    <td class="border p-4 text-green-600"><i class="fas fa-check mr-2"></i>AES-128 + HMAC</td>
+                                    <td class="border p-4 text-purple-600"><i class="fas fa-check mr-2"></i>Strong (2048-bit)</td>
+                                </tr>
+                                <tr class="bg-gray-50">
+                                    <td class="border p-4 font-medium">Key Management</td>
+                                    <td class="border p-4 text-red-600">Keys in browser (exposed)</td>
+                                    <td class="border p-4 text-green-600">Password-derived with salt</td>
+                                    <td class="border p-4 text-purple-600">Public/private key pair</td>
+                                </tr>
+                                <tr>
+                                    <td class="border p-4 font-medium">MITM Protection</td>
+                                    <td class="border p-4 text-red-600"><i class="fas fa-times mr-2"></i>None</td>
+                                    <td class="border p-4 text-green-600"><i class="fas fa-check mr-2"></i>Full (data encrypted)</td>
+                                    <td class="border p-4 text-purple-600"><i class="fas fa-check mr-2"></i>Full (keys encrypted)</td>
+                                </tr>
+                                <tr class="bg-gray-50">
+                                    <td class="border p-4 font-medium">Data Integrity</td>
+                                    <td class="border p-4 text-red-600"><i class="fas fa-times mr-2"></i>No protection</td>
+                                    <td class="border p-4 text-green-600"><i class="fas fa-check mr-2"></i>Built-in (AES modes)</td>
+                                    <td class="border p-4 text-purple-600"><i class="fas fa-check mr-2"></i>Yes (OAEP padding)</td>
+                                </tr>
+                                <tr>
+                                    <td class="border p-4 font-medium">Performance</td>
+                                    <td class="border p-4 text-red-600">Fast (simple operations)</td>
+                                    <td class="border p-4 text-green-600">Fast (hardware accelerated)</td>
+                                    <td class="border p-4 text-purple-600">Slow (only for small data)</td>
+                                </tr>
+                                <tr class="bg-gray-50">
+                                    <td class="border p-4 font-medium">Best For</td>
+                                    <td class="border p-4 text-red-600">Visual demonstration only</td>
+                                    <td class="border p-4 text-green-600">Bulk data encryption</td>
+                                    <td class="border p-4 text-purple-600">Key exchange, digital signatures</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Conclusion -->
+                    <div class="p-6 bg-gradient-to-r from-blue-50 to-green-50 rounded border border-blue-200">
+                        <h4 class="text-xl font-bold text-gray-800 mb-4">Final Analysis & Recommendations</h4>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div class="danger p-4 rounded">
+                                <h5 class="font-bold text-red-700 mb-2">Never Use Client-Side Obfuscation For:</h5>
+                                <ul class="list-disc pl-5 text-red-600">
+                                    <li>Passwords or credentials</li>
+                                    <li>Financial information</li>
+                                    <li>Personal data (PII)</li>
+                                    <li>Medical records</li>
+                                    <li>Any sensitive data</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="success p-4 rounded">
+                                <h5 class="font-bold text-green-700 mb-2">Always Use Proper Encryption For:</h5>
+                                <ul class="list-disc pl-5 text-green-600">
+                                    <li>Data in transit (HTTPS + encryption)</li>
+                                    <li>Data at rest (encrypted storage)</li>
+                                    <li>Secure communications</li>
+                                    <li>Compliance requirements (GDPR, HIPAA)</li>
+                                    <li>Protecting user privacy</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="info p-4 rounded">
+                            <h5 class="font-bold text-blue-700 mb-2">Best Practices Learned:</h5>
+                            <ol class="list-decimal pl-5 text-blue-600">
+                                <li>Always encrypt sensitive data before transmission</li>
+                                <li>Use established cryptographic libraries (not custom code)</li>
+                                <li>Fernet for data, RSA for key exchange</li>
+                                <li>Use proper key derivation (PBKDF2, Argon2)</li>
+                                <li>Implement HTTPS (TLS) for all web communications</li>
+                                <li>Regularly update and patch cryptographic implementations</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <!-- Final Verdict -->
+                    <div class="mt-8 text-center p-6 bg-gray-800 text-white rounded">
+                        <h4 class="text-2xl font-bold mb-4">Security Verdict</h4>
+                        <div class="flex justify-center items-center space-x-6">
+                            <div class="text-center">
+                                <div class="text-6xl text-red-400 mb-2"><i class="fas fa-ban"></i></div>
+                                <h5 class="font-bold">Client Obfuscation</h5>
+                                <p class="text-sm">Security Theater</p>
+                            </div>
+                            <div class="text-4xl text-gray-400"><i class="fas fa-arrow-right"></i></div>
+                            <div class="text-center">
+                                <div class="text-6xl text-green-400 mb-2"><i class="fas fa-shield-alt"></i></div>
+                                <h5 class="font-bold">Fernet + RSA</h5>
+                                <p class="text-sm">Real Security</p>
+                            </div>
+                        </div>
+                        <p class="mt-6 text-gray-300">This project demonstrates why proper encryption is essential for real-world data security.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 7: Image Encryption -->
+            <div id="image" class="tab-content">
+                <div class="success p-4 mb-6 rounded">
+                    <i class="fas fa-camera text-green-500 mr-2"></i>
+                    <strong>SECURE IMAGE ENCRYPTION:</strong> Protect your photos and images with Fernet encryption.
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Left: Image Encryption -->
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">
+                            <i class="fas fa-lock mr-2 text-green-600"></i>Encrypt Image
+                        </h3>
+                        
+                        <!-- Image Upload Area -->
+                        <div class="mb-6 p-6 border-2 border-dashed border-green-300 rounded-lg text-center bg-green-50">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-green-400 mb-4"></i>
+                            <p class="text-gray-700 mb-4 font-medium">Upload Image to Encrypt</p>
+                            <p class="text-sm text-gray-500 mb-4">Supported: PNG, JPG, JPEG (Max 10MB)</p>
+                            <input type="file" id="image-to-encrypt" class="hidden" accept=".png,.jpg,.jpeg,.jfif">
+                            <button id="browse-image" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                                <i class="fas fa-folder-open mr-2"></i>Select Image
+                            </button>
+                            <div id="selected-image-info" class="mt-4 hidden">
+                                <div class="flex items-center justify-center">
+                                    <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                                    <span id="image-filename" class="font-medium text-green-700"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Original Image Preview -->
+                        <div id="original-image-preview-container" class="hidden mb-6">
+                            <h4 class="font-bold text-gray-700 mb-3">Original Image Preview:</h4>
+                            <div class="border rounded-lg p-4 bg-gray-50">
+                                <img id="original-image-preview" class="max-w-full h-auto mx-auto rounded" 
+                                    alt="Original image preview" style="max-height: 200px;">
+                                <p class="text-sm text-gray-500 text-center mt-2" id="image-info"></p>
+                            </div>
+                        </div>
+
+                        <!-- Password Input -->
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2 font-medium">Encryption Password:</label>
+                            <input type="password" id="image-password" 
+                                class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                placeholder="Enter strong password" value="SecureImage123!">
+                            <p class="text-sm text-gray-500 mt-1">
+                                <i class="fas fa-info-circle mr-1"></i> Same password needed for decryption
+                            </p>
+                        </div>
+
+                        <!-- Encrypt Button -->
+                        <button id="encrypt-image-btn" 
+                                class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 mb-6 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled>
+                            <i class="fas fa-lock mr-2"></i>Encrypt Image with Fernet
+                        </button>
+
+                        <!-- Encryption Results -->
+                        <div id="image-encryption-results" class="hidden">
+                            <div class="p-5 bg-gray-50 rounded-lg border">
+                                <h4 class="font-bold text-gray-800 mb-3 flex items-center">
+                                    <i class="fas fa-check-circle text-green-500 mr-2"></i>Image Encrypted Successfully!
+                                </h4>
+                                
+                                <div class="mb-4">
+                                    <label class="block text-gray-600 mb-1">Encrypted File:</label>
+                                    <div class="flex items-center bg-gray-100 p-3 rounded">
+                                        <i class="fas fa-file-archive text-blue-500 mr-2"></i>
+                                        <span id="encrypted-image-filename" class="font-mono text-sm"></span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="block text-gray-600 mb-1">Encryption Details:</label>
+                                    <div class="text-sm text-gray-700 space-y-1">
+                                        <div class="flex justify-between">
+                                            <span>Original Format:</span>
+                                            <span id="original-format" class="font-medium"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Original Size:</span>
+                                            <span id="original-size" class="font-medium"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Encrypted Size:</span>
+                                            <span id="encrypted-size" class="font-medium"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span>Encrypted File:</span>
+                                            <span class="font-medium text-red-600">.enc (Cannot be previewed)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button id="download-encrypted-image" 
+                                        class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">
+                                    <i class="fas fa-download mr-2"></i>Download Encrypted Image
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Image Decryption -->
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">
+                            <i class="fas fa-unlock mr-2 text-blue-600"></i>Decrypt Image
+                        </h3>
+                        
+                        <!-- Encrypted File Upload -->
+                        <div class="mb-6 p-6 border-2 border-dashed border-blue-300 rounded-lg text-center bg-blue-50">
+                            <i class="fas fa-file-archive text-4xl text-blue-400 mb-4"></i>
+                            <p class="text-gray-700 mb-4 font-medium">Upload Encrypted Image (.enc)</p>
+                            <p class="text-sm text-gray-500 mb-4">Only .enc files from this system</p>
+                            <input type="file" id="encrypted-image-to-decrypt" class="hidden" accept=".enc">
+                            <button id="browse-encrypted-image" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                                <i class="fas fa-folder-open mr-2"></i>Select .enc File
+                            </button>
+                            <div id="selected-encrypted-image-info" class="mt-4 hidden">
+                                <div class="flex items-center justify-center">
+                                    <i class="fas fa-check-circle text-blue-500 mr-2"></i>
+                                    <span id="encrypted-image-filename-display" class="font-medium text-blue-700"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Encrypted File Warning -->
+                        <div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div class="flex items-start">
+                                <i class="fas fa-exclamation-triangle text-yellow-500 mr-2 mt-1"></i>
+                                <div>
+                                    <p class="font-medium text-yellow-700">Encrypted Images Cannot Be Previewed</p>
+                                    <p class="text-sm text-yellow-600 mt-1">
+                                        Encrypted .enc files contain randomized binary data. They appear broken/corrupted 
+                                        because Fernet encryption completely transforms the original data.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Password Input -->
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2 font-medium">Decryption Password:</label>
+                            <input type="password" id="decrypt-image-password" 
+                                class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Enter the same password used for encryption">
+                            <p class="text-sm text-gray-500 mt-1">
+                                <i class="fas fa-key mr-1"></i> Must match original encryption password
+                            </p>
+                        </div>
+
+                        <!-- Decrypt Button -->
+                        <button id="decrypt-image-btn" 
+                                class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 mb-6 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled>
+                            <i class="fas fa-unlock mr-2"></i>Decrypt Image
+                        </button>
+
+                        <!-- Decryption Results -->
+                        <div id="image-decryption-results" class="hidden">
+                            <div class="p-5 bg-green-50 rounded-lg border border-green-200">
+                                <h4 class="font-bold text-green-700 mb-3 flex items-center">
+                                    <i class="fas fa-check-circle text-green-600 mr-2"></i>Image Decrypted Successfully!
+                                </h4>
+                                
+                                <!-- Decrypted Image Preview -->
+                                <div class="mb-4">
+                                    <h5 class="font-medium text-gray-700 mb-2">Decrypted Image Preview:</h5>
+                                    <div class="border rounded-lg p-4 bg-white">
+                                        <img id="decrypted-image-preview" class="max-w-full h-auto mx-auto rounded" 
+                                            alt="Decrypted image preview" style="max-height: 200px;">
+                                        <p class="text-sm text-gray-500 text-center mt-2" id="decrypted-image-info"></p>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="block text-gray-600 mb-1">Original Image Restored:</label>
+                                    <div class="flex items-center bg-white p-3 rounded border">
+                                        <i class="fas fa-image text-green-500 mr-2"></i>
+                                        <span id="restored-image-filename" class="font-medium"></span>
+                                    </div>
+                                </div>
+                                
+                                <button id="download-decrypted-image" 
+                                        class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition">
+                                    <i class="fas fa-download mr-2"></i>Download Decrypted Image
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Error Message -->
+                        <div id="image-decryption-error" class="hidden p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <div class="flex items-start">
+                                <i class="fas fa-times-circle text-red-500 mr-2 mt-1"></i>
+                                <div>
+                                    <p class="font-medium text-red-700">Decryption Failed</p>
+                                    <p id="decryption-error-message" class="text-sm text-red-600 mt-1"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Educational Section -->
+                <div class="mt-8 bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-graduation-cap text-purple-600 mr-2"></i>Learning Points
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Why Images Look Broken -->
+                        <div class="p-4 border border-gray-200 rounded-lg">
+                            <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                                <i class="fas fa-question-circle text-blue-500 mr-2"></i>Why Encrypted Images Look Broken
+                            </h4>
+                            <ul class="space-y-2 text-gray-600">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                                    <span>Fernet completely randomizes pixel data</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                                    <span>Image headers/metadata are also encrypted</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                                    <span>Without the key, it's just random binary data</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                                    <span>This is proof that encryption is working correctly</span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Real-World Applications -->
+                        <div class="p-4 border border-gray-200 rounded-lg">
+                            <h4 class="font-bold text-gray-700 mb-3 flex items-center">
+                                <i class="fas fa-briefcase text-green-500 mr-2"></i>Real-World Usage
+                            </h4>
+                            <ul class="space-y-2 text-gray-600">
+                                <li class="flex items-start">
+                                    <i class="fas fa-hospital text-blue-500 mr-2 mt-1"></i>
+                                    <span><strong>Medical Images:</strong> Protect patient X-rays and scans (HIPAA compliance)</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-cloud text-blue-500 mr-2 mt-1"></i>
+                                    <span><strong>Secure Cloud Storage:</strong> Encrypt photos before uploading to cloud</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-shield-alt text-blue-500 mr-2 mt-1"></i>
+                                    <span><strong>Surveillance Data:</strong> Protect CCTV footage from unauthorized access</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-mobile-alt text-blue-500 mr-2 mt-1"></i>
+                                    <span><strong>Mobile Apps:</strong> Secure private photos in gallery apps</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Technical Explanation -->
+                    <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 class="font-bold text-blue-700 mb-3">
+                            <i class="fas fa-microchip mr-2"></i>How Image Encryption Works
+                        </h4>
+                        <div class="text-sm text-blue-600 space-y-2">
+                            <p>1. <strong>Image → Binary Data:</strong> Your image is read as raw bytes (1s and 0s)</p>
+                            <p>2. <strong>Password + Random Salt:</strong> PBKDF2 generates 32-byte combined Fernet key</p>
+                            <p>3. <strong>Fernet Encryption:</strong> Binary data encrypted using CBC mode</p>
+                            <p>4. <strong>Output:</strong> Creates .enc file with salt + encrypted data</p>
+                            <p>5. <strong>Decryption:</strong> Reverse process with correct password restores original perfectly</p>
+                            <p class="mt-3 font-medium">🔐 <strong>Authenticated encryption:</strong> Educational use of authenticated encryption; not a production security system.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        <!-- Footer -->
+        <footer class="mt-12 pt-8 border-t text-center text-gray-500 text-sm">
+            <p>SecureFlow © 2026</p>
+            <p class="mt-1">Network Security Academic Project</p>
+            <p class="mt-1">Tanvi Pawar | M.Sc. Data Analytics</p>
+        </footer>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="js/obfuscation.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+<p class="text-center text-sm text-gray-600 p-4">Local educational demo only. Network view is simulated; actual API requests use HTTP. Do not use confidential data.</p>
+</body>
+</html>
